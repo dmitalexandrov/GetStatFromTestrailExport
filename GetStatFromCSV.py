@@ -1,25 +1,20 @@
-import uuid
+#https://pandas.pydata.org/pandas-docs/stable/user_guide
+#realpython.com/python-csv/
+#habr.com/ru/post/196980/
+#khashtamov.com/ru/pandas-introduction/
+import pandas
+import os
 
-class ExecResult:
-    caseID = ""
-    groupName = ""
-    caseType = ""
-    results=dict()
+class GetTableFromFile:
 
-    @staticmethod
-    def __log(message, value):
-        print("{0}: '{1}'".format(message, value))
-        return value
+    def parseFile(self, fileName):
+        if os.path.isfile("./{0}".format(fileName)):
+            self.df = pandas.read_csv(fileName, sep=",", header=1)
+        else:
+            print("Filename is incorrect")
 
-    def __init__(self, caseID, caseType, groupName = ""):
-       self.caseID = __log("Create object with case ID", caseID)
-       self.caseType = __log("and type", caseType)
-       self.groupName = __log("in group", groupName)
 
-    def addResult(self, elapsed, status):
-        s = __log("Add result of attend with status", status)
-        e = __log("and elapsed time", elapsed.split("s")[0])
-        g = __log("to GUID", uuid.uuid4())
-        self.results[g] = [e, s]
-
-#    def getElapsed
+if __name__ == "__main__":
+    statTable = GetTableFromFile()
+    statTable.parseFile("sprint_66_regression_suite.csv")
+    print(statTable.df[statTable.df["Case ID"] == "C31294"])
