@@ -1,9 +1,5 @@
 #https://pandas.pydata.org/pandas-docs/stable/user_guide
-#https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html
-#https://pythonworld.ru/obrabotka-dannyx/pandas-cookbook-1-csv-reading.html
 #https://khashtamov.com/ru/pandas-introduction/
-#https://ru.stackoverflow.com/questions/896180/%D0%98%D0%B7%D0%BC%D0%B5%D0%BD%D0%B8%D1%82%D1%8C-%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B2-dataframe-pandas-%D0%BF%D0%BE-%D1%83%D1%81%D0%BB%D0%BE%D0%B2%D0%B8%D1%8E
-
 #1. get file
 #2. get dirty table from file
 #3. remove empty duplicates (where Elapsed is null)
@@ -61,10 +57,13 @@ class GetTableFromFile:
             self.statTableClean["Elapsed"].notnull()]
 
         print("Count of Case IDs after cleaning is \n{} \n"
-            "Remove 's' char from Elapsed column and Remove duplicates for total stat"
+            "Remove 's' char from Elapsed column, transform to Integer"
+            "and Remove duplicates for total stat"
               .format(self.statTableClean["Case ID"].count()))
         self.statTableClean["Elapsed"] = self.statTableClean["Elapsed"].apply(
                                             lambda x: x.replace("s", ""))
+        self.statTableClean["Elapsed"] = pandas.to_numeric(
+                                            self.statTableClean["Elapsed"])
         #prevent SettingWithCopyWarning is displayed
         self.statTableUniqs = self.statTableClean.copy()
         self.statTableUniqs.drop_duplicates(subset = "Case ID", 
@@ -80,28 +79,77 @@ class GetTableFromFile:
         else:
             return self.statTableUniqs[self.statTableUniqs["Type"] == 
                                             type.title()]["Case ID"].count()
+                            
+    def getCountOfStatuses(self, status):
+        return self.statTableClean[self.statTableClean["Status"] == 
+                                            status.title()]["Case ID"].count()
+    
+    def getElapsedByStatus(self, status = "total"):
+        if status.lower() == "total":
+            return self.statTableClean["Elapsed"].sum() // 3600
+        return self.statTableClean[self.statTableClean["Status"] == 
+                                            status.title()]["Elapsed"].sum() // 3600
 
 if __name__ == "__main__":
     ACTION_MENU = ("Please choose action:\n"
         "0: Exit\n"
-        "1: Add file for stat"
+        "1: Add file for stat\n"
         "2: Count uniq tests by types\n")
     actionCode = input(ACTION_MENU)
     tables = dict()
     stop = True
+    i = 0
     while stop:
         if actionCode is not "0":
+            #add table from file to dict
             if actionCode is "1":
                 result = GetTableFromFile()
-                tables[result.sourceFile] = result
+                tables[i] = result
+                i += 1
+            #get stats
             if actionCode is "2":
-                totalTable = pandas.DataFrame({})
-                for each in tables:
-                    https://stackoverflow.com/questions/28056171/how-to-build-and-fill-pandas-dataframe-from-for-loop
-                print(self.getCountByType())
-                print(self.getCountByType("Automated"))
-                print(self.getCountByType("To be Automated"))
-                print(self.getCountByType("Manual Only"))
-            actionCode = input(self.ACTION_MENU)
+                totalTable = pandas.DataFrame(index = [
+                    #Type
+                    "Automated",
+                    "To be Automated",
+                    "Manual Only",
+                    "Total",
+                    #Status
+                    "Passed",
+                    "Retest",
+                    "Blocked",
+                    "Failed",
+                    #Elapsed
+                    "Passed Elapsed",
+                    "Retest Elapsed",
+                    "Blocked Elapsed",
+                    "Failed Elapsed",
+                    "Total Elapsed"
+                ])
+                for key,value in tables.items(): 
+                    totalTable[value.sourceFile] = [
+                        #Type
+                        value.getCountByType("Automated"),
+                        value.getCountByType("To be Automated"),
+                        value.getCountByType("Manual Only"),
+                        value.getCountByType(),
+                        #Status
+                        value.getCountOfStatuses("Passed"),
+                        value.getCountOfStatuses("Retest"),
+                        value.getCountOfStatuses("Blocked"),
+                        value.getCountOfStatuses("Failed"),
+                        #Elapsed
+                        value.getElapsedByStatus("Passed"),
+                        value.getElapsedByStatus("Retest"),
+                        value.getElapsedByStatus("Blocked"),
+                        value.getElapsedByStatus("Failed"),
+                        value.getElapsedByStatus()
+                    ]
+                    if key > 0:
+                        totalTable["dif{}".format(key)] = \
+                            totalTable.iloc[:,key] - totalTable.iloc[:,key-1]
+                print(totalTable)
+            actionCode = input(ACTION_MENU)
         else:
+            #exit
             stop = False
