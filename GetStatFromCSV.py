@@ -94,7 +94,8 @@ if __name__ == "__main__":
     ACTION_MENU = ("Please choose action:\n"
         "0: Exit\n"
         "1: Add file for stat\n"
-        "2: Count uniq tests by types\n")
+        "2: Count uniq tests by types\n"
+        "3: Elapsed stat\n")
     actionCode = input(ACTION_MENU)
     tables = dict()
     stop = True
@@ -118,13 +119,7 @@ if __name__ == "__main__":
                     "Passed",
                     "Retest",
                     "Blocked",
-                    "Failed",
-                    #Elapsed
-                    "Passed Elapsed",
-                    "Retest Elapsed",
-                    "Blocked Elapsed",
-                    "Failed Elapsed",
-                    "Total Elapsed"
+                    "Failed"
                 ])
                 for key,value in tables.items(): 
                     totalTable[value.sourceFile] = [
@@ -137,7 +132,23 @@ if __name__ == "__main__":
                         value.getCountOfStatuses("Passed"),
                         value.getCountOfStatuses("Retest"),
                         value.getCountOfStatuses("Blocked"),
-                        value.getCountOfStatuses("Failed"),
+                        value.getCountOfStatuses("Failed")
+                    ]
+                    if key > 0:
+                        totalTable["dif{}".format(key)] = \
+                            totalTable.iloc[:,key] - totalTable.iloc[:,key-1]
+                print(totalTable)
+            if actionCode is "3":
+                elapsedTable = pandas.DataFrame(index = [                    
+                    #Elapsed
+                    "Passed Elapsed",
+                    "Retest Elapsed",
+                    "Blocked Elapsed",
+                    "Failed Elapsed",
+                    "Total Elapsed"
+                ])
+                for key,value in tables.items(): 
+                    elapsedTable[value.sourceFile] = [
                         #Elapsed
                         value.getElapsedByStatus("Passed"),
                         value.getElapsedByStatus("Retest"),
@@ -146,9 +157,9 @@ if __name__ == "__main__":
                         value.getElapsedByStatus()
                     ]
                     if key > 0:
-                        totalTable["dif{}".format(key)] = \
-                            totalTable.iloc[:,key] - totalTable.iloc[:,key-1]
-                print(totalTable)
+                        elapsedTable["dif{}".format(key)] = \
+                            elapsedTable.iloc[:,key] - elapsedTable.iloc[:,key-1]
+                print(elapsedTable)
             actionCode = input(ACTION_MENU)
         else:
             #exit
