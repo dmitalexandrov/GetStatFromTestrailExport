@@ -20,10 +20,10 @@ class GetTableFromFile:
     statTableUniqs = None
     sourceFile = None
     
-    def __init__(self):
+    """ def __init__(self):
         self.sourceFile = self.__chooseFile()        
         self._parseFile()
-        self._cleanTable()
+        self._cleanTable() """
 
     def __init__(self, fileName):
         self.sourceFile = fileName
@@ -111,11 +111,11 @@ class GetTableFromFile:
 if __name__ == "__main__":
     ACTION_MENU_START = ("Please choose action:\n"
         "0: Exit\n"
-        "1: Add file for stat\n"
+        #"1: Add file for stat\n"
         "2: Add all neighbours files\n")
     ACTION_MENU = ("Please choose action:\n"
         "0: Exit\n"
-        "1: Add file for stat\n"
+        #"1: Add file for stat\n"
         "2: Add all neighbours files\n"
         "3: Count uniq tests by types\n"
         "4: Elapsed stat for Automated\n")
@@ -123,33 +123,42 @@ if __name__ == "__main__":
     tables = dict()
     stop = True
     i = 0
+    totalTable = pandas.DataFrame(index = [
+        #Type
+        "Automated",
+        "To be Automated",
+        "Manual Only",
+        "Total",
+        #Status
+        "Passed",
+        "Retest",
+        "Blocked",
+        "Failed"
+    ])
+    elapsedTable = pandas.DataFrame(index = [                    
+        #Elapsed
+        "Passed Elapsed (h)",
+        "Retest Elapsed (h)",
+        "Blocked Elapsed (h)",
+        "Failed Elapsed (h)",
+        "Total Elapsed (h)",
+        "Mean value (m)"
+    ])
     while stop:
         if actionCode is not "0":
             #add table from file to dict
-            if actionCode is "1":
+            """ if actionCode is "1":
                 result = GetTableFromFile()
                 tables[i] = result
-                i += 1
+                i += 1 """
             if actionCode is "2":
                 for each in os.listdir():
                     if os.path.isfile("./{}".format(each)) and ".csv" in each:
                         result = GetTableFromFile(each)
                         tables[i] = result
                         i += 1
-            #get stats
-            if actionCode is "3":
-                totalTable = pandas.DataFrame(index = [
-                    #Type
-                    "Automated",
-                    "To be Automated",
-                    "Manual Only",
-                    "Total",
-                    #Status
-                    "Passed",
-                    "Retest",
-                    "Blocked",
-                    "Failed"
-                ])
+                #fill total table
+                ti = 1 #additional table indexer for difference columns
                 for key,value in tables.items(): 
                     totalTable[value.sourceFile] = [
                         #Type
@@ -163,20 +172,16 @@ if __name__ == "__main__":
                         value.getCountOfStatuses("Blocked"),
                         value.getCountOfStatuses("Failed")
                     ]
-                    if key > 0:
+                    if key == 1:
                         totalTable["dif{}".format(key)] = \
                             totalTable.iloc[:,key] - totalTable.iloc[:,key-1]
-                print(totalTable)
-            if actionCode is "4":
-                elapsedTable = pandas.DataFrame(index = [                    
-                    #Elapsed
-                    "Passed Elapsed (h)",
-                    "Retest Elapsed (h)",
-                    "Blocked Elapsed (h)",
-                    "Failed Elapsed (h)",
-                    "Total Elapsed (h)",
-                    "Mean value (m)"
-                ])
+                    elif key > 1:
+                        print("{}({})".format(key, ti))
+                        totalTable["dif{}".format(key)] = \
+                            totalTable.iloc[:,key + ti] - totalTable.iloc[:,key + ti - 2]
+                        ti += 1
+                #fill elapsed table
+                ei = 1 #additional table indexer for difference columns
                 for key,value in tables.items(): 
                     elapsedTable[value.sourceFile] = [
                         #Elapsed
@@ -187,9 +192,17 @@ if __name__ == "__main__":
                         value.getElapsedByStatus(),
                         value.getAverage()
                     ]
-                    if key > 0:
+                    if key == 1:
                         elapsedTable["dif{}".format(key)] = \
                             elapsedTable.iloc[:,key] - elapsedTable.iloc[:,key-1]
+                    elif key > 1:
+                        elapsedTable["dif{}".format(key)] = \
+                            elapsedTable.iloc[:,key + ei] - elapsedTable.iloc[:,key + ei -2]
+                        ei += 1
+            #get stats
+            if actionCode is "3":                
+                print(totalTable)
+            if actionCode is "4":
                 print(elapsedTable)
             actionCode = input(ACTION_MENU)
         else:
