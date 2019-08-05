@@ -3,6 +3,7 @@
 import pandas
 import os
 import sys
+import matplotlib.pyplot as plt
 
 """ Get the statistic from Testrail export files
 This script parse exported files from Testrail. For export
@@ -117,8 +118,8 @@ if __name__ == "__main__":
         "0: Exit\n"
         #"1: Add file for stat\n"
         "2: Add all neighbours files\n"
-        "3: Count uniq tests by types\n"
-        "4: Elapsed stat for Automated\n")
+        "3: Count uniq tests by types and diagram\n"
+        "4: Elapsed stat for Automated")
     actionCode = input(ACTION_MENU_START)
     tables = dict()
     stop = True
@@ -202,6 +203,7 @@ if __name__ == "__main__":
             #get stats
             if actionCode is "3":                
                 print(totalTable)
+                totalTable.plot()
             if actionCode is "4":
                 print(elapsedTable)
             actionCode = input(ACTION_MENU)
