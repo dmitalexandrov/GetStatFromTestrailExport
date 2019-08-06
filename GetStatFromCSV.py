@@ -20,13 +20,11 @@ class GetTableFromFile:
     statTableUniqs = None
     sourceFile = None
     
-    """ def __init__(self):
-        self.sourceFile = self.__chooseFile()        
-        self._parseFile()
-        self._cleanTable() """
-
-    def __init__(self, fileName):
-        self.sourceFile = fileName
+    def __init__(self, fileName = ""):
+        if fileName == "":
+            self.sourceFile = self.__chooseFile()
+        else:
+            self.sourceFile = fileName
         self._parseFile()
         self._cleanTable()
 
@@ -61,16 +59,16 @@ class GetTableFromFile:
         #prevent SettingWithCopyWarning is displayed
         #https://stackoverflow.com/questions/20625582/how-to-deal-with-settingwithcopywarning-in-pandas
         self.statTableClean = self.statTableDirty.copy()
-        #print("Count of Case IDs before cleaning is \n{} \n"
+        print("Count of Case IDs before cleaning: {}"
         #    "Remove entires, where Elapsed is NULL"
-        #      .format(self.statTableClean["Case ID"].count()))                
+              .format(self.statTableClean["Case ID"].count()))                
         self.statTableClean = self.statTableClean[
             self.statTableClean["Elapsed"].notnull()]
 
-        #print("Count of Case IDs after cleaning is \n{} \n"
-        #    "Remove 's' char from Elapsed column, transform to Integer"
-        #    "and Remove duplicates for total stat"
-        #      .format(self.statTableClean["Case ID"].count()))
+        print("Count of Case IDs after cleaning: {}"
+            #"Remove 's' char from Elapsed column, transform to Integer"
+            #"and Remove duplicates for total stat"
+              .format(self.statTableClean["Case ID"].count()))
         self.statTableClean["Elapsed"] = self.statTableClean["Elapsed"].apply(
                                             lambda x: x.replace("s", ""))
         self.statTableClean["Elapsed"] = pandas.to_numeric(
@@ -80,10 +78,10 @@ class GetTableFromFile:
         self.statTableUniqs.drop_duplicates(subset = "Case ID", 
                                             keep = "last", inplace = True)
 
-        #print("Count of Case IDs after remove duplicates \n{}"
-        #      .format(self.statTableUniqs["Case ID"].count()))
+        print("Count of Case IDs after remove duplicates: {}"
+              .format(self.statTableUniqs["Case ID"].count()))
 
-    def getCountByType(self, type = "total"):
+    def __getCountByType(self, type = "total"):
         #print("Get count of {} tests".format(type.title()))
         if type.lower() == "total":
             return self.statTableUniqs["Case ID"].count()
@@ -91,34 +89,62 @@ class GetTableFromFile:
             return self.statTableUniqs[self.statTableUniqs["Type"] == 
                                             type.title()]["Case ID"].count()
                             
-    def getCountOfStatuses(self, status):
+    def __getCountOfStatuses(self, status):
         return self.statTableClean[self.statTableClean["Status"] == 
             status.title()]["Case ID"].count()
     
-    def getElapsedByStatus(self, status = "total"):
+    def __getElapsedByStatus(self, type, status):
         if status.lower() == "total":
-            return self.statTableClean[self.statTableClean["Type"] == 
-            "Automated"]["Elapsed"].sum() // 3600
+            return round(self.statTableClean[self.statTableClean["Type"] == 
+                type]["Elapsed"].sum() / 3600, 2)
         #Use () for removing 'boolean series key will be reindexed to match dataframe index' warning
         return round(self.statTableClean[(self.statTableClean["Type"] == 
-            "Automated") & (self.statTableClean["Status"] == 
+            type) & (self.statTableClean["Status"] == 
             status.title())]["Elapsed"].sum() / 3600, 2)
 
-    def getAverage(self):
+    def __getAverage(self, type):
         return round(self.statTableClean[self.statTableClean["Type"] == 
-            "Automated"]["Elapsed"].mean() / 60, 2)
+            type]["Elapsed"].mean() / 60, 2)
+
+    def getTotalArray(self):
+        return [
+        #Type
+            self.__getCountByType("Automated"),
+            self.__getCountByType("To be Automated"),
+            self.__getCountByType("Manual Only"),
+            self.__getCountByType(),
+            #Status
+            self.__getCountOfStatuses("Passed"),
+            self.__getCountOfStatuses("Retest"),
+            self.__getCountOfStatuses("Blocked"),
+            self.__getCountOfStatuses("Failed")
+        ]
+
+    def getElapsedArray(self, type):
+        return [
+            #Elapsed
+            self.__getElapsedByStatus(type, "Passed"),
+            self.__getElapsedByStatus(type, "Retest"),
+            self.__getElapsedByStatus(type, "Blocked"),
+            self.__getElapsedByStatus(type, "Failed"),
+            self.__getElapsedByStatus(type, "Total")
+        ]
+
+    def getAverageArray(self, type):
+        return [self.__getAverage(type)]
 
 if __name__ == "__main__":
     ACTION_MENU_START = ("Please choose action:\n"
         "0: Exit\n"
-        #"1: Add file for stat\n"
+        "1: Add file for stat\n"
         "2: Add all neighbours files\n")
     ACTION_MENU = ("Please choose action:\n"
         "0: Exit\n"
-        #"1: Add file for stat\n"
+        "1: Add file for stat\n"
         "2: Add all neighbours files\n"
         "3: Count uniq tests by types\n"
-        "4: Elapsed stat for Automated\n")
+        "4: Elapsed stat\n"
+        "5: Write to file\n")
     actionCode = input(ACTION_MENU_START)
     tables = dict()
     stop = True
@@ -135,22 +161,54 @@ if __name__ == "__main__":
         "Blocked",
         "Failed"
     ])
-    elapsedTable = pandas.DataFrame(index = [                    
+    elapsedAutomatedTable = pandas.DataFrame(index = [                    
         #Elapsed
         "Passed Elapsed (h)",
         "Retest Elapsed (h)",
         "Blocked Elapsed (h)",
         "Failed Elapsed (h)",
-        "Total Elapsed (h)",
-        "Mean value (m)"
+        "Total Elapsed (h)"
     ])
+    elapsedNonAutomatedTable = pandas.DataFrame(index = [                    
+        #Elapsed
+        "Passed Elapsed (h)",
+        "Retest Elapsed (h)",
+        "Blocked Elapsed (h)",
+        "Failed Elapsed (h)",
+        "Total Elapsed (h)"
+    ])
+    elapsedTotalTable = pandas.DataFrame(index = [                    
+        #Elapsed
+        "Passed Elapsed (h)",
+        "Retest Elapsed (h)",
+        "Blocked Elapsed (h)",
+        "Failed Elapsed (h)",
+        "Total Elapsed (h)"
+    ])
+    averageTable = pandas.DataFrame(index = [                    
+        "Total mean value (m)",
+        "Automated mean value (m)"
+        ])
     while stop:
         if actionCode is not "0":
             #add table from file to dict
-            """ if actionCode is "1":
+            if actionCode is "1":
                 result = GetTableFromFile()
                 tables[i] = result
-                i += 1 """
+                totalTable[result.sourceFile] = result.getTotalArray()
+                ea = result.getElapsedArray("Automated")
+                etba = result.getElapsedArray("To Be Automated") 
+                emo = result.getElapsedArray("Manual Only")
+                elapsedAutomatedTable[result.sourceFile] = ea
+                elapsedNonAutomatedTable[result.sourceFile] = [x + y for x, y in zip(etba, emo)]
+                elapsedTotalTable[result.sourceFile] = [x + y + z for x, y, z in zip(ea, etba, emo)]
+                
+                aa = result.getAverageArray("Automated")
+                atba = result.getAverageArray("To Be Automated")
+                amo = result.getAverageArray("Manual Only")
+                averageTable[result.sourceFile] = [
+                    round((x + y + z) / 3, 2) for x, y, z in zip(aa, atba, amo)] + aa
+                i += 1
             if actionCode is "2":
                 for each in os.listdir():
                     if os.path.isfile("./{}".format(each)) and ".csv" in each:
@@ -160,18 +218,7 @@ if __name__ == "__main__":
                 #fill total table
                 ti = 1 #additional table indexer for difference columns
                 for key,value in tables.items(): 
-                    totalTable[value.sourceFile] = [
-                        #Type
-                        value.getCountByType("Automated"),
-                        value.getCountByType("To be Automated"),
-                        value.getCountByType("Manual Only"),
-                        value.getCountByType(),
-                        #Status
-                        value.getCountOfStatuses("Passed"),
-                        value.getCountOfStatuses("Retest"),
-                        value.getCountOfStatuses("Blocked"),
-                        value.getCountOfStatuses("Failed")
-                    ]
+                    totalTable[value.sourceFile] = value.getTotalArray()
                     if key == 1:
                         totalTable["dif{}".format(key)] = \
                             totalTable.iloc[:,key] - totalTable.iloc[:,key-1]
@@ -182,28 +229,58 @@ if __name__ == "__main__":
                         ti += 1
                 #fill elapsed table
                 ei = 1 #additional table indexer for difference columns
-                for key,value in tables.items(): 
-                    elapsedTable[value.sourceFile] = [
-                        #Elapsed
-                        value.getElapsedByStatus("Passed"),
-                        value.getElapsedByStatus("Retest"),
-                        value.getElapsedByStatus("Blocked"),
-                        value.getElapsedByStatus("Failed"),
-                        value.getElapsedByStatus(),
-                        value.getAverage()
-                    ]
+                for key,value in tables.items():
+                    ea = value.getElapsedArray("Automated")
+                    etba = value.getElapsedArray("To Be Automated") 
+                    emo = value.getElapsedArray("Manual Only")
+                    elapsedAutomatedTable[value.sourceFile] = ea
+                    elapsedNonAutomatedTable[value.sourceFile] = [x + y for x, y in zip(etba, emo)]
+                    elapsedTotalTable[value.sourceFile] = [x + y + z for x, y, z in zip(ea, etba, emo)]
+
+                    aa = value.getAverageArray("Automated")
+                    atba = value.getAverageArray("To Be Automated")
+                    amo = value.getAverageArray("Manual Only")
+                    averageTable[value.sourceFile] = [
+                        round((x + y + z) / 3, 2) for x, y, z in zip(aa, atba, amo)] + aa
                     if key == 1:
-                        elapsedTable["dif{}".format(key)] = \
-                            elapsedTable.iloc[:,key] - elapsedTable.iloc[:,key-1]
+                        elapsedAutomatedTable["dif{}".format(key)] = \
+                            elapsedAutomatedTable.iloc[:,key] - elapsedAutomatedTable.iloc[:,key-1]
+                        elapsedNonAutomatedTable["dif{}".format(key)] = \
+                            elapsedNonAutomatedTable.iloc[:,key] - elapsedNonAutomatedTable.iloc[:,key-1]
+                        elapsedTotalTable["dif{}".format(key)] = \
+                            elapsedTotalTable.iloc[:,key] - elapsedTotalTable.iloc[:,key-1]
+                        averageTable["dif{}".format(key)] = \
+                            averageTable.iloc[:,key] - averageTable.iloc[:,key-1]
                     elif key > 1:
-                        elapsedTable["dif{}".format(key)] = \
-                            elapsedTable.iloc[:,key + ei] - elapsedTable.iloc[:,key + ei -2]
+                        elapsedAutomatedTable["dif{}".format(key)] = \
+                            elapsedAutomatedTable.iloc[:,key + ei] - elapsedAutomatedTable.iloc[:,key + ei -2]
+                        elapsedNonAutomatedTable["dif{}".format(key)] = \
+                            elapsedNonAutomatedTable.iloc[:,key + ei] - elapsedNonAutomatedTable.iloc[:,key + ei -2]
+                        elapsedTotalTable["dif{}".format(key)] = \
+                            elapsedTotalTable.iloc[:,key + ei] - elapsedTotalTable.iloc[:,key + ei -2]
+                        averageTable["dif{}".format(key)] = \
+                            averageTable.iloc[:,key + ei] - averageTable.iloc[:,key + ei -2]
                         ei += 1
-            #get stats
+            
             if actionCode is "3":                
                 print(totalTable)
             if actionCode is "4":
-                print(elapsedTable)
+                print("Automated: \n {0}\n".format(elapsedAutomatedTable))
+                print("NonAutomated: \n {0}\n".format(elapsedNonAutomatedTable))
+                print("Total: \n {0}\n".format(elapsedTotalTable))
+                print("Average: \n {0}\n".format(averageTable))
+            if actionCode is "5":
+                #totalTable.to_csv("./statTotal.csv", sep=",")
+                #elapsedAutomatedTable.to_csv("./statElAuto.csv", sep=",")
+                #elapsedNonAutomatedTable.to_csv("./statElNonAto.csv", sep=",")
+                #elapsedTotalTable.to_csv("./statElTot.csv", sep=",")
+                #averageTable.to_csv("./statAver.csv", sep=",")
+                with pandas.ExcelWriter('./GSFT.xlsx') as writer:
+                    totalTable.to_excel(writer, sheet_name="Total")
+                    elapsedAutomatedTable.to_excel(writer, sheet_name="ElapsedAutomated")
+                    elapsedNonAutomatedTable.to_excel(writer, sheet_name="ElapsedNonAutomated")
+                    elapsedTotalTable.to_excel(writer, sheet_name="ElapsedTotal")
+                    averageTable.to_excel(writer, sheet_name="Average")
             actionCode = input(ACTION_MENU)
         else:
             #exit
