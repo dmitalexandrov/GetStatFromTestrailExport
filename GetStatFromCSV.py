@@ -12,7 +12,6 @@ sould be selected columns:
 - Selenium Profile
 - Status
 - Type
-
 """
 class GetTableFromFile:
     statTableDirty = None
