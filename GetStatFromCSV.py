@@ -12,6 +12,7 @@ sould be selected columns:
 - Selenium Profile
 - Status
 - Type
+additional install pandas, openpyxl
 """
 class GetTableFromFile:
     statTableDirty = None
